@@ -208,6 +208,14 @@ faster-tests = []
 human-panic = []
 log = []
 
+# CI profile optimized for faster builds
+[profile.ci]
+inherits = "dev"
+debug = "line-tables-only"
+
+[profile.ci.package."*"]
+debug = false
+
 [profile.profiling]
 inherits = "release"
 debug = true
