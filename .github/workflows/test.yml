@@ -30,7 +30,7 @@ jobs:
         with:
           arguments: --all-features
       - name: cargo clippy
-        run: cargo clippy --profile ci --tests --all-features -- -D warnings
+        run: cargo clippy --tests --all-features -- -D warnings
 
   test:
     name: Test
@@ -66,6 +66,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       RUST_BACKTRACE: "1"
+      # Optimize CI build performance by reducing debug info
+      CARGO_PROFILE_DEV_DEBUG: "line-tables-only"
     steps:
       - name: Enable long paths
         if: startsWith(matrix.os, 'windows')
@@ -139,7 +141,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         run: echo "RUSTFLAGS="-C debuginfo=0"" >> $GITHUB_ENV
       - name: cargo test
-        run: cargo nextest run --cargo-profile ci --features password-storage
+        run: cargo nextest run --features password-storage
       # TODO: https://github.com/PyO3/maturin/issues/2263
       #- name: test cross compiling with zig
       #  if: ${{ !contains(matrix.python-version, '-dev') }}
@@ -304,7 +306,7 @@ jobs:
       - name: cargo test
         run: |
           # unset GITHUB_ACTIONS env var to disable zig related tests
-          env -u GITHUB_ACTIONS cargo nextest run --cargo-profile ci --features password-storage
+          env -u GITHUB_ACTIONS cargo nextest run --features password-storage
 
   test-auditwheel:
     name: Test Auditwheel
@@ -460,7 +462,7 @@ jobs:
         shell: bash
         run: |
           set -ex
-          cargo run --profile ci sdist -o dist
+          cargo run sdist -o dist
           uv pip install --system -v dist/maturin-*.tar.gz
         if: ${{ steps.changes.outputs.changed == 'true' || contains(github.event.pull_request.labels.*.name, 'release') }}
       - run: maturin --version
@@ -483,9 +485,9 @@ jobs:
       # Caching
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
-      - run: cargo build --profile ci --no-default-features
+      - run: cargo build --no-default-features
       - name: cargo build
-        run: cargo build --profile ci --all
+        run: cargo build --all
 
   test-downstream:
     name: Test downstream - ${{ matrix.downstream.repository }}
@@ -528,7 +530,7 @@ jobs:
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
       - name: cargo check
-        run: cargo check --profile ci --target ${{ matrix.platform.target }}
+        run: cargo check --target ${{ matrix.platform.target }}
 
   conclusion:
     needs:
