@@ -24,6 +24,9 @@ jobs:
       - run: |
           rustup component add rustfmt
           rustup component add clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: lint
       - name: cargo fmt
         run: cargo fmt --all -- --check
       - uses: EmbarkStudios/cargo-deny-action@v2
@@ -66,6 +69,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       RUST_BACKTRACE: "1"
+      CARGO_PROFILE_DEV_DEBUG: "line-tables-only"
     steps:
       - name: Enable long paths
         if: startsWith(matrix.os, 'windows')
@@ -76,17 +80,10 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
-      - name: sccache setup
-        if: ${{ matrix.os != 'windows-11-arm' }}
-        uses: mozilla-actions/sccache-action@v0.0.9
-        with:
-          version: "v0.10.0"
-      - name: Enable sccache
-        if: ${{ matrix.os != 'windows-11-arm' }}
-        run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
       - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-${{ matrix.os }}
       - uses: astral-sh/setup-uv@v7
       - name: Install python packages
         run: |
@@ -134,10 +131,6 @@ jobs:
       - name: Set MATURIN_TEST_PYTHON
         shell: bash
         run: echo "MATURIN_TEST_PYTHON=${{ steps.setup-python.outputs.python-path }}" >> $GITHUB_ENV
-      # To save cache disk space
-      - name: Disable debuginfo on Windows
-        if: startsWith(matrix.os, 'windows')
-        run: echo "RUSTFLAGS="-C debuginfo=0"" >> $GITHUB_ENV
       - name: cargo test
         run: cargo nextest run --features password-storage
       # TODO: https://github.com/PyO3/maturin/issues/2263
@@ -210,14 +203,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: "1"
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: "sccache"
     steps:
       - uses: actions/checkout@v6
-      - name: Sccache Setup
-        uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: Swatinem/rust-cache@v2
         with:
-          version: "v0.10.0"
+          shared-key: test-windows-cross
       - uses: actions/setup-python@v6
         with:
           python-version: 3.12
@@ -425,9 +415,6 @@ jobs:
   test-bootstrap:
     name: Test Bootstrap
     runs-on: ${{ matrix.os }}
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: "sccache"
     strategy:
       fail-fast: false
       matrix:
@@ -446,12 +433,10 @@ jobs:
               - 'Cargo.toml'
               - '.github/workflows/test.yml'
       - uses: astral-sh/setup-uv@v7
-      # Caching
-      - name: Sccache Setup
+      - uses: Swatinem/rust-cache@v2
         if: ${{ steps.changes.outputs.changed == 'true' || contains(github.event.pull_request.labels.*.name, 'release') }}
-        uses: mozilla-actions/sccache-action@v0.0.9
         with:
-          version: "v0.10.0"
+          shared-key: test-bootstrap-${{ matrix.os }}
       - uses: actions/setup-python@v6
         if: ${{ steps.changes.outputs.changed == 'true' || contains(github.event.pull_request.labels.*.name, 'release') }}
         with:
