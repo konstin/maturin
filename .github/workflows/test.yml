@@ -66,6 +66,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       RUST_BACKTRACE: "1"
+      CARGO_PROFILE_DEV_DEBUG: "line-tables-only"
     steps:
       - name: Enable long paths
         if: startsWith(matrix.os, 'windows')
